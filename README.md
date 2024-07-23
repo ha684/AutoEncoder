@@ -14,7 +14,7 @@ You can install the necessary libraries using:
 ```bash
 pip install numpy matplotlib pickle-mixin torch torchvision scikit-learn pillow
 ```
-# Step to run the project
+## Step to run the project
 1. Download any dataset of your choice and put it into the directory
   
 2. Run utils.py to preprocess the images and create a pickle data file.
