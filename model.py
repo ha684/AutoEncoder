@@ -4,26 +4,45 @@ from torch.utils.data import  Dataset
 import os
 from PIL import Image
 import numpy as np
+import torchvision.models as models
+
 # Define the autoencoder model
 class Autoencoder(nn.Module):
     def __init__(self):
         super(Autoencoder, self).__init__()
+        
+        resnet = models.resnet18(pretrained=True)
+        
         self.encoder = nn.Sequential(
-            nn.Conv2d(1, 64, kernel_size=3, padding=1),   # 1 input channel, 64 output channels
-            nn.ReLU(),
-            nn.MaxPool2d(2, padding=0),  # Ensure downsampling keeps dimensions correct
-            nn.Conv2d(64, 128, kernel_size=3, padding=1),  # 64 input channels, 128 output channels
-            nn.ReLU(),
-            nn.MaxPool2d(2, padding=0)   # Ensure downsampling keeps dimensions correct
+            nn.Conv2d(1, 64, kernel_size=7, stride=2, padding=3, bias=False),
+            resnet.bn1,
+            resnet.relu,
+            resnet.maxpool,
+            resnet.layer1,
+            resnet.layer2,
+            resnet.layer3,
+            resnet.layer4
         )
+        
         self.decoder = nn.Sequential(
-            nn.Conv2d(128, 128, kernel_size=3, padding=1),  # 128 input channels, 128 output channels
+            nn.ConvTranspose2d(512, 256, kernel_size=4, stride=2, padding=1),
+            nn.BatchNorm2d(256),
             nn.ReLU(),
-            nn.Upsample(scale_factor=2, mode='nearest'),
-            nn.Conv2d(128, 64, kernel_size=3, padding=1),  # 128 input channels, 64 output channels
+            nn.ConvTranspose2d(256, 128, kernel_size=4, stride=2, padding=1),
+            nn.BatchNorm2d(128),
             nn.ReLU(),
-            nn.Upsample(scale_factor=2, mode='nearest'),
-            nn.Conv2d(64, 1, kernel_size=3, padding=1),  # 64 input channels, 1 output channel
+            nn.ConvTranspose2d(128, 64, kernel_size=4, stride=2, padding=1),
+            nn.BatchNorm2d(64),
+            nn.ReLU(),
+            nn.ConvTranspose2d(64, 32, kernel_size=4, stride=2, padding=1),
+            nn.BatchNorm2d(32),
+            nn.ReLU(),
+            nn.ConvTranspose2d(32, 32, kernel_size=4, stride=2, padding=1),
+            nn.BatchNorm2d(32),
+            nn.ReLU(),
+            nn.Conv2d(32, 16, kernel_size=3, padding=1),
+            nn.ReLU(),
+            nn.Conv2d(16, 3, kernel_size=3, padding=1),
             nn.Sigmoid()
         )
 
@@ -31,35 +50,32 @@ class Autoencoder(nn.Module):
         x = self.encoder(x)
         x = self.decoder(x)
         return x
-
-class Noisy(Dataset):
-    def __init__(self, noisy_images, clean_images):
-        self.noisy_images = noisy_images
-        self.clean_images = clean_images
-
-    def __len__(self):
-        return len(self.noisy_images)
-
-    def __getitem__(self, idx):
-        noisy_image = self.noisy_images[idx]
-        clean_image = self.clean_images[idx]
-        return torch.tensor(noisy_image, dtype=torch.float32), torch.tensor(clean_image, dtype=torch.float32)
     
 class icdar2015(Dataset):
-    def __init__(self, data_path, transform=None):
+    def __init__(self, data_path, transform=None,color_transform=None):
         self.data_path = data_path
-        self.image_paths = [f for f in os.listdir(data_path) if f.endswith('.jpg')]
+        self.image_paths = [f for f in os.listdir(data_path) if f.endswith(('.jpg', '.png', '.gif'))]
         self.transform = transform
-
+        self.color_transform = color_transform
+        
     def __len__(self):
         return len(self.image_paths)
 
     def __getitem__(self, idx):
         img_path = os.path.join(self.data_path, self.image_paths[idx])
-        image = Image.open(img_path).convert("L")
+        grayscale_image = Image.open(img_path).convert("L")  # Load as grayscale
+        color_image = Image.open(img_path).convert("RGB")  # Load as color
+
         if self.transform:
-            image = self.transform(image)
-        return image
+            grayscale_image = self.transform(grayscale_image)
+            gray_np = grayscale_image.squeeze().numpy()
+            # Add noise
+            noisy_gray_np = make_noise(gray_np)
+            # Convert back to tensor
+            grayscale_image = torch.from_numpy(noisy_gray_np).unsqueeze(0)
+        if self.color_transform:
+            color_image = self.color_transform(color_image)
+        return grayscale_image.float(), color_image.float()
 
 # EarlyStopping class
 class EarlyStopping:
@@ -80,10 +96,11 @@ class EarlyStopping:
             self.counter += 1
             if self.counter >= self.patience:
                 self.early_stop = True
+
                 
 def make_noise(normal_image):
     mean = 0
     sigma = 1
     gauss = np.random.normal(mean, sigma, normal_image.shape)
     noise_image = normal_image + gauss * 0.08
-    return noise_image
+    return np.clip(noise_image, 0, 1)

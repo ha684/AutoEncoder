@@ -1,30 +1,27 @@
-import numpy as np
 from torchvision import transforms
-from model import icdar2015, make_noise
-import os
-import pickle
+from model import icdar2015
 
-image_size = 224
-n_batchsize = 32
+image_size = 416
+n_batchsize = 16
 train_path = './icdar2015/train'
 val_path = './icdar2015/test'
 
-transform = transforms.Compose([
+grayscale_transform = transforms.Compose([
     transforms.Resize((image_size, image_size)),
-    transforms.ToTensor(),
+    transforms.ToTensor()
 ])
-#load and convert train and val data to numpy arrays
-train_data = icdar2015(train_path, transform=transform)
-train_images = np.array([train_data[i].numpy() for i in range(len(train_data))])
 
-val_data = icdar2015(val_path, transform=transform)
-val_images = np.array([val_data[i].numpy() for i in range(len(val_data))])
+color_transform = transforms.Compose([
+    transforms.Resize((image_size, image_size)),
+    transforms.ToTensor()
+])
+def load_data():
+    train_data = icdar2015(train_path, transform=grayscale_transform, color_transform=color_transform)
+    val_data = icdar2015(val_path, transform=grayscale_transform, color_transform=color_transform)
+    return train_data, val_data
 
-#make noise
-noise_train_images = np.array([make_noise(img) for img in train_images])
-noise_val_images = np.array([make_noise(img) for img in val_images])
+# grayscale_train_images = torch.stack([train_data[i][0] for i in range(len(train_data))])
+# color_train_images = torch.stack([train_data[i][1] for i in range(len(train_data))])
+# grayscale_val_images = torch.stack([val_data[i][0] for i in range(len(val_data))])
+# color_val_images = torch.stack([val_data[i][1] for i in range(len(val_data))])
 
-#save to pickle file
-if not os.path.exists('data.dat'):
-    with open("data.dat", "wb") as f:
-        pickle.dump([noise_train_images, noise_val_images, train_images, val_images], f)

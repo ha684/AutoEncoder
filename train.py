@@ -2,28 +2,19 @@ import torch.nn as nn
 import torch
 import torch.optim as optim
 from model import Autoencoder,EarlyStopping
-import pickle
+from utils import load_data
 from torch.utils.data import DataLoader
-from model import Noisy
 
-n_epochs = 100
-n_batchsize = 32
+n_epochs = 2000
+n_batchsize = 16
 
-try:
-    with open("data.dat", "rb") as f:
-        arr = pickle.load(f)
-        noise_train_images, noise_val_images, train_images, val_images = arr[0], arr[1], arr[2], arr[3]
-except: raise Exception('Run utils.py first')
-
-#coupling
-train_dataset = Noisy(noise_train_images, train_images)
-val_dataset = Noisy(noise_val_images, val_images)
+train_dataset, val_dataset = load_data()
 train_loader = DataLoader(train_dataset, batch_size=n_batchsize, shuffle=True)
 val_loader = DataLoader(val_dataset, batch_size=n_batchsize, shuffle=False)
 
 model = Autoencoder()
-criterion = nn.BCELoss()
-optimizer = optim.Adam(model.parameters(), lr=0.001)
+criterion = nn.MSELoss()
+optimizer = optim.Adam(model.parameters(), lr=0.0001)
 
 # Train the model
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
