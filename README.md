@@ -26,4 +26,5 @@ python utils.py
 ```bash
 python train.py
 ```
-
+## Result
+![image](https://github.com/user-attachments/assets/8fcc93fc-4361-4d78-922b-3432fd203201)
