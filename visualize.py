@@ -5,7 +5,7 @@ from model import Autoencoder
 from torchvision import transforms
 import numpy as np
 # Load the model
-image_size = 416
+image_size = 224
 
 model = Autoencoder()
 model.load_state_dict(torch.load('autoencoder.pth'))
@@ -15,7 +15,7 @@ model.eval()
 
 # Preprocess the input data
 color_transform = transforms.Compose([
-    transforms.Resize((416,416)),
+    transforms.Resize((image_size,image_size)),
     transforms.ToTensor()
 ])
 
