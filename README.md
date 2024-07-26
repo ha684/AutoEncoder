@@ -28,3 +28,5 @@ python train.py
 ```
 ## Result
 ![image](https://github.com/user-attachments/assets/8fcc93fc-4361-4d78-922b-3432fd203201)
+
+In my opinion, this is like a baby version of modern stable diffusion but due to the limitation in data and GPU, its hard to see how far this model can go. 
