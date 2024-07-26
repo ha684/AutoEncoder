@@ -5,7 +5,7 @@ from model import Autoencoder
 from torchvision import transforms
 import numpy as np
 # Load the model
-image_size = 224
+image_size = 416
 
 model = Autoencoder()
 model.load_state_dict(torch.load('autoencoder.pth'))
